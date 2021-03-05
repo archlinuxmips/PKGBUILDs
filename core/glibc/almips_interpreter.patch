@@ -1,0 +1,13 @@
+--- glibc-2.32/sysdeps/unix/sysv/linux/mips/mips64/ldconfig.h	2020-08-05 02:17:00.000000000 +0000
++++ ldconfig.h	2021-01-29 09:25:40.465715380 +0000
+@@ -18,8 +18,8 @@
+ #include <sysdeps/generic/ldconfig.h>
+ 
+ #define SYSDEP_KNOWN_INTERPRETER_NAMES \
+-  { "/lib32/ld.so.1", FLAG_ELF_LIBC6 }, \
+-  { "/lib64/ld.so.1", FLAG_ELF_LIBC6 },
++  { "/lib/ld-linux-mipsel.so.1", FLAG_ELF_LIBC6 }, \
++  { "/lib/ld-linux-mips64el.so.1", FLAG_ELF_LIBC6 },
+ #define SYSDEP_KNOWN_LIBRARY_NAMES \
+   { "libc.so.6", FLAG_ELF_LIBC6 },	\
+   { "libm.so.6", FLAG_ELF_LIBC6 },

@@ -1,0 +1,17 @@
+--- gcc/config/mips/linux.h	2020-07-23 06:35:17.420385389 +0000
++++ linux.h	2020-12-18 15:45:25.195641033 +0000
+@@ -22,11 +22,11 @@
+ #define GNU_USER_LINK_EMULATIONN32 "elf32%{EB:b}%{EL:l}tsmipn32"
+ 
+ #define GLIBC_DYNAMIC_LINKER32 \
+-  "%{mnan=2008:/lib/ld-linux-mipsn8.so.1;:/lib/ld.so.1}"
++  "%{mnan=2008:/lib/ld-linux-mipseln8.so.1;:/lib/ld-linux-mipsel.so.1}"
+ #define GLIBC_DYNAMIC_LINKER64 \
+-  "%{mnan=2008:/lib64/ld-linux-mipsn8.so.1;:/lib64/ld.so.1}"
++  "%{mnan=2008:/lib64/ld-linux-mips64eln8.so.1;:/lib/ld-linux-mips64el.so.1}"
+ #define GLIBC_DYNAMIC_LINKERN32 \
+-  "%{mnan=2008:/lib32/ld-linux-mipsn8.so.1;:/lib32/ld.so.1}"
++  "%{mnan=2008:/lib32/ld-linux-mipsn32eln8.so.1;:/lib/ld-linux-mipsn32el.so.1}"
+ 
+ #undef UCLIBC_DYNAMIC_LINKER32
+ #define UCLIBC_DYNAMIC_LINKER32 \

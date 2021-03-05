@@ -1,0 +1,360 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Daniel Kozak <kozzi11@gmail.com>
+
+# Arch Linux MIPS:
+# - renamed dynamic linkers' symlinks
+# - configured with mips64r2 ISA
+# - disabled multiarch
+# - disabled multilib
+# - replaced bugurl with our GitHub issue page
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
+# NOTE: libtool requires rebuilt with each new gcc version
+
+pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d)
+pkgver=10.2.0
+_majorver=${pkgver%%.*}
+_islver=0.21
+pkgrel=1
+pkgdesc='The GNU Compiler Collection'
+arch=('mips64el')
+license=(GPL LGPL FDL custom)
+url='https://gcc.gnu.org'
+makedepends=(binutils libmpc libxcrypt)
+options=(!emptydirs !distcc)
+_libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
+# _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
+# source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
+source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.xz{,.sig}
+        http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
+	c89 c99
+        gdc_phobos_path.patch
+        fs64270.patch
+        ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
+        ipa-fix-ICE-in-get_default_value.patch
+        almips_dynamic_linker.patch)
+validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
+              86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
+              13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
+              33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
+sha256sums=('b8dd4368bb9c7f0b98188317ee0254dd8cc99d1e3a18d0ff146c855fe16c1d8c'
+            'SKIP'
+	    'SKIP'
+            'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
+            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
+            'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
+            '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee'
+            'fcb11c9bcea320afd202b031b48f8750aeaedaa4b0c5dddcd2c0a16381e927e4'
+            '42865f2af3f48140580c4ae70b6ea03b5bdca0f29654773ef0d42ce00d60ea16'
+            'ede5f7ee00c7ac148f84443c28647a17a9c1faff2e627c4daa1b0d920eab9674')
+
+prepare() {
+  [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
+  cd gcc
+  # link isl for in-tree build
+  ln -s ../isl-${_islver} isl
+  # Do not run fixincludes
+  sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
+
+  # Arch Linux MIPS installs mips64el libraries /lib
+  [[ $CARCH == "mips64el" ]] && sed -i 's/lib[36][24]/lib/' gcc/config/mips/t-linux64
+
+  # Disable thin_archive_support, archive may crashed by `ar rcT`
+  sed -i 's/$(AR_FLAGS)T/$(AR_FLAGS)/g' gcc/Makefile.in
+
+  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" {libiberty,gcc}/configure
+
+  # D hacks
+  patch -p1 -i "$srcdir/gdc_phobos_path.patch"
+
+  # Turn off SSP for nostdlib|nodefaultlibs|ffreestanding
+  # https://bugs.archlinux.org/task/64270
+  patch -p1 -i "$srcdir/fs64270.patch"
+
+  # Fix a crash in mpv when mesa 20.2 is compiled with LTO
+  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/3239
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96482
+  patch -Np1 -i ../ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
+  patch -Np1 -i ../ipa-fix-ICE-in-get_default_value.patch
+
+  mkdir -p "$srcdir/gcc-build"
+
+  # Arch Linux MIPS dynamic linker
+  # /lib/ld-linux-mipsel.so.1
+  # /lib/ld-linux-mips64el.so.1
+  patch -p0 -i "$srcdir/almips_dynamic_linker.patch"
+}
+
+build() {
+  cd gcc-build
+
+  # using -pipe causes spurious test-suite failures
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48565
+  CFLAGS=${CFLAGS/-pipe/}
+  CXXFLAGS=${CXXFLAGS/-pipe/}
+  "../gcc/configure" --prefix=/usr \
+    --libdir=/usr/lib \
+    --libexecdir=/usr/lib \
+    --mandir=/usr/share/man \
+    --infodir=/usr/share/info \
+    --with-bugurl=https://github.com/archlinuxmips/PKGBUILDs/issues \
+    --enable-languages=c,c++,ada,fortran,go,objc,obj-c++,d \
+    --with-abi=64 \
+    --with-mips-plt \
+    --with-arch-64=mips64r2 \
+    --with-isl \
+    --with-linker-hash-style=gnu \
+    --with-system-zlib \
+    --enable-__cxa_atexit \
+    --enable-checking=release \
+    --enable-clocale=gnu \
+    --enable-default-pie \
+    --enable-default-ssp \
+    --enable-gnu-indirect-function \
+    --enable-gnu-unique-object \
+    --enable-install-libiberty \
+    --enable-linker-build-id \
+    --enable-lto \
+    --enable-plugin \
+    --enable-shared \
+    --enable-threads=posix \
+    --disable-multiarch \
+    --disable-multilib \
+    --disable-werror \
+    --disable-decimal-float \
+    --disable-libssp \
+    --disable-libstdcxx-pch \
+    --disable-libunwind-exceptions \
+    --build=mips64el-linux-gnuabi64 \
+    --host=mips64el-linux-gnuabi64 \
+    --target=mips64el-linux-gnuabi64 \
+    gdc_include_dir=/usr/include/dlang/gdc
+
+  make
+}
+
+check() {
+  cd gcc-build
+
+  # disable libphobos test to avoid segfaults and other unfunny ways to waste my time  
+  sed -i '/maybe-check-target-libphobos \\/d' Makefile 
+
+  # do not abort on error as some are "expected"
+  make -k check || true
+  "$srcdir/gcc/contrib/test_summary"
+}
+
+package_gcc-libs() {
+  pkgdesc='Runtime libraries shipped by GCC'
+  depends=('glibc>=2.27')
+  options+=(!strip)
+  provides=(libgo.so libgfortran.so libgphobos.so)
+  replaces=(libgphobos)
+
+  cd gcc-build
+  make -C $CHOST/libgcc DESTDIR="$pkgdir" install-shared
+  rm -f "$pkgdir/$_libdir/libgcc_eh.a"
+
+  for lib in libatomic \
+             libgfortran \
+             libgo \
+             libgomp \
+             libquadmath \
+             libstdc++-v3/src; do
+    make -C $CHOST/$lib DESTDIR="$pkgdir" install-toolexeclibLTLIBRARIES
+  done
+
+  make -C $CHOST/libobjc DESTDIR="$pkgdir" install-libs
+  make -C $CHOST/libstdc++-v3/po DESTDIR="$pkgdir" install
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -rf "$pkgdir"/$_libdir/include/d/
+  rm -f "$pkgdir"/usr/lib/libgphobos.spec
+
+  for lib in libgomp \
+             libquadmath; do
+    make -C $CHOST/$lib DESTDIR="$pkgdir" install-info
+  done
+
+  rm -f "$pkgdir"/usr/lib/*.{a,la}
+
+  # Install Runtime Library Exception
+  install -Dm644 "$srcdir/gcc/COPYING.RUNTIME" \
+    "$pkgdir/usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION"
+}
+
+package_gcc() {
+  pkgdesc="The GNU Compiler Collection - C and C++ frontends"
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.28' libmpc)
+  groups=('base-devel')
+  options+=(staticlibs)
+
+  cd gcc-build
+
+  make -C gcc DESTDIR="$pkgdir" install-driver install-cpp install-gcc-ar \
+    c++.install-common install-headers install-plugin install-lto-wrapper
+
+  install -m755 -t "$pkgdir/usr/bin/" gcc/gcov{,-tool}
+  install -m755 -t "$pkgdir/${_libdir}/" gcc/{cc1,cc1plus,collect2,lto1}
+
+  make -C $CHOST/libgcc DESTDIR="$pkgdir" install
+  rm -f "$pkgdir"/usr/lib/libgcc_s.so*
+
+  make -C $CHOST/libstdc++-v3/src DESTDIR="$pkgdir" install
+  make -C $CHOST/libstdc++-v3/include DESTDIR="$pkgdir" install
+  make -C $CHOST/libstdc++-v3/libsupc++ DESTDIR="$pkgdir" install
+  make -C $CHOST/libstdc++-v3/python DESTDIR="$pkgdir" install
+
+  make DESTDIR="$pkgdir" install-libcc1
+  install -d "$pkgdir/usr/share/gdb/auto-load/usr/lib"
+  mv "$pkgdir"/usr/lib/libstdc++.so.6.*-gdb.py \
+    "$pkgdir/usr/share/gdb/auto-load/usr/lib/"
+  rm -f "$pkgdir"/usr/lib/libstdc++.so*
+
+  make DESTDIR="$pkgdir" install-fixincludes
+  make -C gcc DESTDIR="$pkgdir" install-mkheaders
+
+  make -C lto-plugin DESTDIR="$pkgdir" install
+  install -dm755 "$pkgdir"/usr/lib/bfd-plugins/
+  ln -s /${_libdir}/liblto_plugin.so \
+    "$pkgdir/usr/lib/bfd-plugins/"
+
+  make -C $CHOST/libgomp DESTDIR="$pkgdir" install-nodist_{libsubinclude,toolexeclib}HEADERS
+  make -C $CHOST/libquadmath DESTDIR="$pkgdir" install-nodist_libsubincludeHEADERS
+
+  make -C libiberty DESTDIR="$pkgdir" install
+  install -m644 libiberty/pic/libiberty.a "$pkgdir/usr/lib"
+
+  make -C gcc DESTDIR="$pkgdir" install-man install-info
+  rm -f "$pkgdir"/usr/share/man/man1/{gccgo,gfortran,gdc}.1
+  rm -f "$pkgdir"/usr/share/info/{gccgo,gfortran,gnat-style,gnat_rm,gnat_ugn,gdc}.info
+
+  make -C libcpp DESTDIR="$pkgdir" install
+  make -C gcc DESTDIR="$pkgdir" install-po
+
+  # many packages expect this symlink
+  ln -s gcc "$pkgdir"/usr/bin/cc
+
+  # POSIX conformance launcher scripts for c89 and c99
+  install -Dm755 "$srcdir/c89" "$pkgdir/usr/bin/c89"
+  install -Dm755 "$srcdir/c99" "$pkgdir/usr/bin/c99"
+
+  # install the libstdc++ man pages # MISSING during pre-build
+  # make -C $CHOST/libstdc++-v3/doc DESTDIR="$pkgdir" doc-install-man
+
+  # byte-compile python libraries
+  python -m compileall "$pkgdir/usr/share/gcc-${pkgver%%+*}/"
+  python -O -m compileall "$pkgdir/usr/share/gcc-${pkgver%%+*}/"
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-fortran() {
+  pkgdesc='Fortran front-end for GCC'
+  depends=("gcc=$pkgver-$pkgrel")
+
+  cd gcc-build
+  make -C $CHOST/libgfortran DESTDIR="$pkgdir" install-cafexeclibLTLIBRARIES \
+    install-{toolexeclibDATA,nodist_fincludeHEADERS,gfor_cHEADERS}
+  make -C $CHOST/libgomp DESTDIR="$pkgdir" install-nodist_fincludeHEADERS
+  make -C gcc DESTDIR="$pkgdir" fortran.install-{common,man,info}
+  install -Dm755 gcc/f951 "$pkgdir/${_libdir}/f951"
+
+  ln -s gfortran "$pkgdir/usr/bin/f95"
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-objc() {
+  pkgdesc='Objective-C front-end for GCC'
+  depends=("gcc=$pkgver-$pkgrel")
+
+  cd gcc-build
+  make DESTDIR="$pkgdir" -C $CHOST/libobjc install-headers
+  install -dm755 "$pkgdir/${_libdir}"
+  install -m755 gcc/cc1obj{,plus} "$pkgdir/${_libdir}/"
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-ada() {
+  pkgdesc='Ada front-end for GCC (GNAT)'
+  depends=("gcc=$pkgver-$pkgrel")
+  options+=(staticlibs)
+
+  cd gcc-build/gcc
+  make DESTDIR="$pkgdir" ada.install-{common,info}
+  install -m755 gnat1 "$pkgdir/${_libdir}"
+
+  cd "$srcdir"/gcc-build/$CHOST/libada
+  make DESTDIR=${pkgdir} INSTALL="install" \
+    INSTALL_DATA="install -m644" install-libada
+
+  ln -s gcc "$pkgdir/usr/bin/gnatgcc"
+
+  # insist on dynamic linking, but keep static libraries because gnatmake complains
+  mv "$pkgdir"/${_libdir}/adalib/libgna{rl,t}-${_majorver}.so "$pkgdir/usr/lib"
+  ln -s libgnarl-${_majorver}.so "$pkgdir/usr/lib/libgnarl.so"
+  ln -s libgnat-${_majorver}.so "$pkgdir/usr/lib/libgnat.so"
+  rm -f "$pkgdir"/${_libdir}/adalib/libgna{rl,t}.so
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-go() {
+  pkgdesc='Go front-end for GCC'
+  depends=("gcc=$pkgver-$pkgrel")
+  provides=("go=1.12.2")
+  conflicts=(go)
+
+  cd gcc-build
+  make -C $CHOST/libgo DESTDIR="$pkgdir" install-exec-am
+  make DESTDIR="$pkgdir" install-gotools
+  make -C gcc DESTDIR="$pkgdir" go.install-{common,man,info}
+
+  install -Dm755 gcc/go1 "$pkgdir/${_libdir}/go1"
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-d() {
+  pkgdesc="D frontend for GCC"
+  depends=("gcc=$pkgver-$pkgrel")
+  provides=(gdc)
+  replaces=(gdc)
+  options=('staticlibs')
+
+  cd gcc-build
+  make -C gcc DESTDIR="$pkgdir" d.install-{common,man,info}
+
+  install -Dm755 gcc/gdc "$pkgdir"/usr/bin/gdc
+  install -Dm755 gcc/d21 "$pkgdir"/"$_libdir"/d21
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -f "$pkgdir/usr/lib/"lib{gphobos,gdruntime}.so*
+
+  install -d "$pkgdir"/usr/include/dlang
+  ln -s /"${_libdir}"/include/d "$pkgdir"/usr/include/dlang/gdc
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}

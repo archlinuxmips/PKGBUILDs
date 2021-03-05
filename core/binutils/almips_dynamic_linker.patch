@@ -1,0 +1,12 @@
+--- binutils-2.35.1/gold/mips.cc	2020-12-17 21:06:27.666817860 +0800
++++ mips.cc	2020-12-17 21:09:43.232640124 +0800
+@@ -12601,7 +12601,8 @@
+   true,                 // is_default_stack_executable
+   false,                // can_icf_inline_merge_sections
+   '\0',                 // wrap_char
+-  size == 32 ? "/lib/ld.so.1" : "/lib64/ld.so.1",      // dynamic_linker
++  size == 32 ? "/lib/ld-linux-mipsel.so.1" :
++	       "/lib/ld-linux-mips64el.so.1",      // dynamic_linker
+   0x400000,             // default_text_segment_address
+   64 * 1024,            // abi_pagesize (overridable by -z max-page-size)
+   4 * 1024,             // common_pagesize (overridable by -z common-page-size)
