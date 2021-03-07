@@ -1,0 +1,15 @@
+--- pacman-5.2.2/src/pacman/conf.c	2020-06-22 08:33:22.000000000 +0000
++++ conf.c	2021-01-27 11:59:30.656760056 +0000
+@@ -392,7 +392,11 @@
+ 	if(strcmp(arch, "auto") == 0) {
+ 		struct utsname un;
+ 		uname(&un);
+-		config->arch = strdup(un.machine);
++                if (!strcmp(un.machine, "mips64")) {
++                        config->arch = strdup("mips64el");
++                } else {
++                        config->arch = strdup(un.machine);
++                }
+ 	} else {
+ 		config->arch = strdup(arch);
+ 	}

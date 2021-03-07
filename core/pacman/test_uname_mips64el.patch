@@ -1,0 +1,10 @@
+--- pacman-5.2.2/test/pacman/tests/upgrade082.py	2017-04-24 02:52:29.000000000 +0000
++++ upgrade082.py	2021-01-27 13:52:16.424082129 +0000
+@@ -2,6 +2,7 @@
+ 
+ import os
+ machine = os.uname()[4]
++machine = machine + 'el' if machine == 'mips64' else machine
+ 
+ p = pmpkg("dummy")
+ p.files = ["bin/dummy",
