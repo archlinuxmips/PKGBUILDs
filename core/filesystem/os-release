@@ -1,0 +1,11 @@
+NAME="Arch Linux MIPS"
+PRETTY_NAME="Arch Linux MIPS"
+ID=archmips
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;23;147;209"
+HOME_URL="https://github.com/archlinuxmips/"
+DOCUMENTATION_URL="https://github.com/archlinuxmips/"
+SUPPORT_URL="https://github.com/archlinuxmips/"
+BUG_REPORT_URL="https://github.com/archlinuxmips/"
+LOGO=archlinux
