@@ -1,0 +1,44 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Pre-build: Remove vala vapi, skip check
+
+pkgname=libsecret
+pkgver=0.20.4
+pkgrel=1
+pkgdesc="Library for storing and retrieving passwords and other secrets"
+url="https://wiki.gnome.org/Projects/Libsecret"
+arch=('mips64el')
+license=(LGPL)
+depends=(glib2 libgcrypt)
+makedepends=(docbook-xsl gobject-introspection git gtk-doc meson valgrind)
+optdepends=('org.freedesktop.secrets: secret storage backend')
+provides=(libsecret-1.so)
+_commit=3fe635e64efd4b8dbc9ec3548b0bc8034c7665c4  # tags/0.20.4^0
+source=("git+https://gitlab.gnome.org/GNOME/libsecret.git#commit=$_commit"
+        fix-test.diff)
+sha256sums=('SKIP'
+            '760e40ffcd3383149d62f803a900b3af1a838fb084a8403e45d0764696dd2ffe')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Fix compiliation of test-vala-unstable
+  # https://gitlab.gnome.org/GNOME/libsecret/-/issues/54
+  git apply -3 ../fix-test.diff
+}
+
+build() {
+  arch-meson -D vapi=false $pkgname build
+  meson compile -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C build
+}
+
+# vim:set sw=2 et:
