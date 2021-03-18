@@ -9,11 +9,9 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
 # NOTE: valgrind requires rebuilt with each major glibc version
 
-noautobuild=1
-
 pkgname=glibc
 pkgver=2.32
-pkgrel=5
+pkgrel=6
 arch=('mips64el')
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -90,8 +88,8 @@ build() {
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
       ${_configure_flags[@]} \
-      --host=mips64el-linux-gnuabi64 \
-      --build=mips64el-linux-gnuabi64
+      --host=mips64el-unknown-linux-gnuabi64 \
+      --build=mips64el-unknown-linux-gnuabi64
 
   # build libraries with fortify disabled
   echo "build-programs=no" >> configparms
