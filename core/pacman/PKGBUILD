@@ -8,7 +8,7 @@
 
 pkgname=pacman
 pkgver=5.2.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support"
 arch=('mips64el')
 url="https://www.archlinux.org/pacman/"
