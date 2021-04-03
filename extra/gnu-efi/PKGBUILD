@@ -1,0 +1,57 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+
+# Arch Linux MIPS:
+# - patched MIPS support
+
+pkgname=gnu-efi
+pkgver=3.0.13
+pkgrel=1
+pkgdesc="Develop EFI applications using the GNU toolchain and the EFI development environment"
+arch=('mips64el')
+url="https://sourceforge.net/projects/gnu-efi/"
+license=('BSD')
+conflicts=('gnu-efi-libs')
+provides=('gnu-efi-libs')
+replaces=('gnu-efi-libs')
+source=("https://download.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
+        "${pkgname}-3.0.12-ldflags.patch"
+        "lfbgrid_arch_mips.patch")
+sha512sums=('cda0e7c04d4fa8431b93dc7caa36e0a5e1076470dcdeae25f8bd08949c5d387647fdd9ca3db6b551766857e2c24ce3c6d95869d5dc5154128a2d3540d410e1eb'
+            '7fd1c8d09ff870c33ae62887b657a7367f85a07f6709d33471ca13117a08e755853fd1e99db492d1db47444b95ae871078c4a913ed70aa7236e49349046e06b6'
+            '28715b6a1fb1cc2b07af345f5e16a0bd2fb294b057853bd61b47f9da6ed965a1252e1e45a5ac790c65314fbe2fd55ff2ae04b42180201a7f01cc82ac0ac36e72')
+b2sums=('4b593587f73d7edc7aa2930fb3ea8ea9d9ad37a09b37166fc09e37762eb436edcf6b5c1abbaf46df0b09dfb5b7ebc776fb59cf36c800898ff5ea0a362bdf6c4f'
+        'c1633240ee6363c1df2ae5d7aab5a76a8fe93fd86a2c9a4973b8b30273e1512914c67c88483d0880cfca00df38b3b62fe9e1cd173b139b622ee83f0db835320f'
+        '3e8915be5a0a4c19395012ee92e449fcd1faa0010e952b3913af6a8f190e8ea4bef3a54196072bf1f36a7de254a87e930e40db2b16484a425e2afd1ace46fcbf')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # -Werror, not even once
+  sed -e 's/-Werror//g' -i Make.defaults
+  # insert LDFLFAGS into custom linker for apps
+  patch -Np1 -i "../${pkgname}-3.0.12-ldflags.patch"
+  # MIPS architectures support
+  patch -Np1 -i "$srcdir/lfbgrid_arch_mips.patch"
+}
+
+build() {
+  # MIPS64 only ?
+  CFLAGS+=" -D__mips64__"
+  cd "$pkgname-$pkgver"
+  make
+  make -C lib
+  make -C gnuefi
+  make -C inc
+  # unset LDFLAGS for custom linker used in apps, as we have patched our
+  # LDFLAGS in manually in prepare()
+  LDFLAGS=""
+  make -C apps
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make INSTALLROOT="$pkgdir/" PREFIX='/usr' install
+  install -vDm 644 apps/*.efi -t "${pkgdir}/usr/share/${pkgname}/apps/$CARCH"
+  install -vDm 644 README.efilib -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -vDm 644 {ChangeLog,README.{gnuefi,git,elilo}} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}

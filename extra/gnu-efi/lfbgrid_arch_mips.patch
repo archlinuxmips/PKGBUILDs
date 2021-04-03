@@ -1,0 +1,26 @@
+--- a/apps/lfbgrid.c	2021-03-09 04:05:36.000000000 +0800
++++ b/lfbgrid.c	2021-04-03 13:35:08.585126711 +0800
+@@ -51,9 +51,9 @@
+ 	UINTN NumPixels;
+ 	UINT32 *PixelBuffer;
+ 	UINT32 CopySize, BufferSize;
+-#if defined(__x86_64__) || defined(__aarch64__)
++#if defined(__x86_64__) || defined(__aarch64__) || defined(__mips64)
+ 	UINT64 FrameBufferAddr;
+-#elif defined(__i386__) || defined(__arm__)
++#elif defined(__i386__) || defined(__arm__) || defined(__mips32)
+ 	UINT32 FrameBufferAddr;
+ #else
+ #error YOUR ARCH HERE
+@@ -114,9 +114,9 @@
+ 			Print(L"No linear framebuffer on this device.\n");
+ 			return;
+ 		}
+-#if defined(__x86_64__) || defined(__aarch64__)
++#if defined(__x86_64__) || defined(__aarch64__) || defined(__mips64)
+ 		FrameBufferAddr = (UINT64)gop->Mode->FrameBufferBase;
+-#elif defined(__i386__) || defined(__arm__)
++#elif defined(__i386__) || defined(__arm__) || (__mips32)
+ 		FrameBufferAddr = (UINT32)(UINT64)gop->Mode->FrameBufferBase;
+ #else
+ #error YOUR ARCH HERE
