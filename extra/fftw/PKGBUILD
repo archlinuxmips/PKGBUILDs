@@ -1,0 +1,77 @@
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=fftw
+pkgver=3.3.9
+pkgrel=1
+pkgdesc="A library for computing the discrete Fourier transform (DFT)"
+arch=('mips64el')
+license=('GPL2')
+url="http://www.fftw.org/"
+depends=('bash' 'gcc-libs' 'glibc' 'openmpi')
+makedepends=('gcc-fortran')
+provides=('libfftw3q_threads.so' 'libfftw3q_omp.so' 'libfftw3q.so'
+'libfftw3l_threads.so' 'libfftw3l_omp.so' 'libfftw3l_mpi.so' 'libfftw3l.so'
+'libfftw3f_threads.so' 'libfftw3f_omp.so' 'libfftw3f_mpi.so' 'libfftw3f.so'
+'libfftw3_threads.so' 'libfftw3_omp.so' 'libfftw3_mpi.so' 'libfftw3.so')
+source=("http://www.fftw.org/${pkgname}-${pkgver}.tar.gz")
+sha512sums=('52ebc2a33063a41fd478f6ea2acbf3b511867f736591d273dd57f9dfca5d3e0b0c73157921b3a36f1a7cfd741a8a6bde0fd80de578040ae730ea168b5ba466cf')
+b2sums=('6ea6966f3c5056102e6c3e4628b072c7e9832e3250b292808ed934b3a82515fd77658cbaff50d7b1268fb8c9444b10e39b22d100b7c31ea2452f3cee59c9f280')
+
+prepare() {
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-double"
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-long-double"
+}
+
+build() {
+  export F77='gfortran'
+  # use upstream default CFLAGS while keeping our -march/-mtune
+  CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
+  # default configure call
+  _default_configure="./configure --prefix=/usr --enable-shared --enable-threads --enable-mpi --enable-openmp"
+
+  # configure single precision
+  (
+    cd "${pkgname}-${pkgver}"
+    ${_default_configure} --enable-single
+    # NOTE: fix overlinking
+    sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  )
+
+  # configure double precision
+  (
+    cd "${pkgname}-${pkgver}-double"
+    ${_default_configure}
+    # NOTE: fix overlinking
+    sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  )
+
+  # configure long-double precission
+  (
+    cd "${pkgname}-${pkgver}-long-double"
+    ${_default_configure} --enable-long-double
+    # NOTE: fix overlinking
+    sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  )
+
+  make -C "${pkgname}-${pkgver}"
+  make -C "${pkgname}-${pkgver}-double"
+  make -C "${pkgname}-${pkgver}-long-double"
+}
+
+check() {
+  make check -C "${pkgname}-${pkgver}"
+  make check -C "${pkgname}-${pkgver}-double"
+  make check -C "${pkgname}-${pkgver}-long-double"
+}
+
+package() {
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-double"
+  make DESTDIR="${pkgdir}" install -C "${pkgname}-${pkgver}-long-double"
+
+  cd "${pkgname}-${pkgver}"
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,README,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
