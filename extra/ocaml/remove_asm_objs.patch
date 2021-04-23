@@ -1,0 +1,21 @@
+--- src/ocaml-4.11.1/runtime/Makefile	2020-09-01 12:47:58.000000000 +0000
++++ src/Makefile	2021-02-15 03:44:01.862450911 +0000
+@@ -96,14 +96,13 @@
+ 
+ libcamlrunpic_OBJECTS := $(BYTECODE_C_SOURCES:.c=_bpic.$(O))
+ 
+-libasmrun_OBJECTS := $(NATIVE_C_SOURCES:.c=_n.$(O)) $(ASM_OBJECTS)
++libasmrun_OBJECTS := $(NATIVE_C_SOURCES:.c=_n.$(O))
+ 
+-libasmrund_OBJECTS := $(NATIVE_C_SOURCES:.c=_nd.$(O)) $(ASM_OBJECTS)
++libasmrund_OBJECTS := $(NATIVE_C_SOURCES:.c=_nd.$(O))
+ 
+-libasmruni_OBJECTS := $(NATIVE_C_SOURCES:.c=_ni.$(O)) $(ASM_OBJECTS)
++libasmruni_OBJECTS := $(NATIVE_C_SOURCES:.c=_ni.$(O))
+ 
+-libasmrunpic_OBJECTS := $(NATIVE_C_SOURCES:.c=_npic.$(O)) \
+-  $(ASM_OBJECTS:.$(O)=_libasmrunpic.$(O))
++libasmrunpic_OBJECTS := $(NATIVE_C_SOURCES:.c=_npic.$(O))
+ 
+ # General (non target-specific) assembler and compiler flags
+ 
