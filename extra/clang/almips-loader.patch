@@ -1,0 +1,45 @@
+--- a/clang-11.0.1.src/lib/Driver/ToolChains/Linux.cpp
++++ b/clang-11.0.1.src/lib/Driver/ToolChains/Linux.cpp
+@@ -473,12 +473,29 @@
+     break;
+   }
+   case llvm::Triple::mips:
+-  case llvm::Triple::mipsel:
++  case llvm::Triple::mipsel: {
++    bool IsNaN2008 = tools::mips::isNaN2008(Args, Triple);
++
++    LibDir = "lib";
++
++    if (tools::mips::isUCLibc(Args))
++      Loader = IsNaN2008 ? "ld-uClibc-mipsn8.so.0" : "ld-uClibc.so.0";
++    else if (!Triple.hasEnvironment() &&
++             Triple.getVendor() == llvm::Triple::VendorType::MipsTechnologies)
++      Loader =
++          Triple.isLittleEndian() ? "ld-musl-mipsel.so.1" : "ld-musl-mips.so.1";
++    else
++      Loader = IsNaN2008 ?
++          (Triple.isLittleEndian() ? "ld-linux-mipseln8.so.1" : "ld-linux-mipsn8.so.1"):
++          (Triple.isLittleEndian() ? "ld-linux-mipsel.so.1" : "ld-linux-mips.so.1");
++
++    break;
++  }
+   case llvm::Triple::mips64:
+   case llvm::Triple::mips64el: {
+     bool IsNaN2008 = tools::mips::isNaN2008(Args, Triple);
+ 
+-    LibDir = "lib" + tools::mips::getMipsABILibSuffix(Args, Triple);
++    LibDir = "lib";
+ 
+     if (tools::mips::isUCLibc(Args))
+       Loader = IsNaN2008 ? "ld-uClibc-mipsn8.so.0" : "ld-uClibc.so.0";
+@@ -487,7 +504,9 @@
+       Loader =
+           Triple.isLittleEndian() ? "ld-musl-mipsel.so.1" : "ld-musl-mips.so.1";
+     else
+-      Loader = IsNaN2008 ? "ld-linux-mipsn8.so.1" : "ld.so.1";
++      Loader = IsNaN2008 ?
++          (Triple.isLittleEndian() ? "ld-linux-mips64eln8.so.1" : "ld-linux-mips64n8.so.1"):
++          (Triple.isLittleEndian() ? "ld-linux-mips64el.so.1" : "ld-linux-mips64.so.1");
+ 
+     break;
+   }
