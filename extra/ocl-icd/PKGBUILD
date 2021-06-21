@@ -1,0 +1,52 @@
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Contributor: Lukas Jirkovsky <l.jirkovsky@gmail.com>
+
+pkgname=ocl-icd
+pkgver=2.3.0
+pkgrel=1
+pkgdesc="OpenCL ICD Bindings"
+arch=('mips64el')
+url="https://github.com/OCL-dev/ocl-icd"
+license=('BSD')
+depends=('glibc')
+makedepends=('ruby' 'mesa' 'xmlto' 'asciidoc' 'opencl-headers>=2.1')
+checkdepends=()
+provides=('opencl-icd-loader')
+conflicts=('libcl')
+replaces=('libcl')
+optdepends=('opencl-driver: packaged opencl driver')
+source=("ocl-icd-${pkgver}.tar.gz::https://github.com/OCL-dev/${pkgname}/archive/v${pkgver}.tar.gz"
+        0001-Updated-to-support-latest-Khronos-headers.patch)
+sha256sums=('469f592ccd9b0547fb7212b17e1553b203d178634c20d3416640c0209e3ddd50'
+            'aaf90a2b3e308f0028b40ffab48f857f145be81257bd9e53f23f29d946be201e')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # fix build failure with latest opencl headers
+  patch -Np1 -i ../0001-Updated-to-support-latest-Khronos-headers.patch
+
+  autoreconf -fiv
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  CFLAGS+=' -fcommon' # https://wiki.gentoo.org/wiki/Gcc_10_porting_notes/fno_common
+  ./configure --prefix=/usr
+  make
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make -k check
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make DESTDIR="$pkgdir/" install
+
+  install -m755 -d "$pkgdir/usr/share/licenses/ocl-icd"
+  install -m644 "$srcdir/$pkgname-$pkgver/COPYING" "${pkgdir}/usr/share/licenses/ocl-icd/"
+}
+
+# vim:set ts=2 sw=2 et:
