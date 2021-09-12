@@ -1,0 +1,50 @@
+From b00df947a104694efa0c2cea1a9068efc44fda5c Mon Sep 17 00:00:00 2001
+From: Alexei Katranov <alexei.katranov@intel.com>
+Date: Thu, 3 Jun 2021 16:36:16 +0300
+Subject: [PATCH 1/2] Supress mallinfo deprecation warning in
+ test_malloc_overload.cpp
+
+Signed-off-by: Alexei Katranov <alexei.katranov@intel.com>
+---
+ test/tbbmalloc/test_malloc_overload.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/test/tbbmalloc/test_malloc_overload.cpp b/test/tbbmalloc/test_malloc_overload.cpp
+index 35dd7b26b..66166ff66 100644
+--- a/test/tbbmalloc/test_malloc_overload.cpp
++++ b/test/tbbmalloc/test_malloc_overload.cpp
+@@ -448,7 +448,10 @@ TEST_CASE("Main set of tests") {
+     CheckMemalignFuncOverload(aligned_alloc, free);
+ #endif
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+     struct mallinfo info = mallinfo();
++#pragma GCC diagnostic pop
+     // right now mallinfo initialized by zero
+     REQUIRE((!info.arena && !info.ordblks && !info.smblks && !info.hblks
+            && !info.hblkhd && !info.usmblks && !info.fsmblks
+
+From 65cfcf0deac184f0d2e5f07fb2e6df1de54f0614 Mon Sep 17 00:00:00 2001
+From: Alexei Katranov <alexei.katranov@intel.com>
+Date: Tue, 8 Jun 2021 11:09:05 +0300
+Subject: [PATCH 2/2] Fix warning in flow_graph_types_impl
+
+Signed-off-by: Alexei Katranov <alexei.katranov@intel.com>
+---
+ include/oneapi/tbb/detail/_flow_graph_types_impl.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/oneapi/tbb/detail/_flow_graph_types_impl.h b/include/oneapi/tbb/detail/_flow_graph_types_impl.h
+index 97c770b15..847a57971 100644
+--- a/include/oneapi/tbb/detail/_flow_graph_types_impl.h
++++ b/include/oneapi/tbb/detail/_flow_graph_types_impl.h
+@@ -169,7 +169,7 @@ struct Wrapper<T[N]> : public WrapperBase {
+     // default-initialized and then copied to in some fashion, resulting in two
+     // constructions and one destruction per element.  If the type is char[ ], we
+     // placement new into each element, resulting in one construction per element.
+-    static const size_t space_size = sizeof(ArrayType) / sizeof(char);
++    static const size_t space_size = sizeof(ArrayType);
+     char value_space[space_size];
+ 
+ 
